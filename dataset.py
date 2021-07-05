@@ -5,7 +5,7 @@ class NetParasDataset(torch.utils.data.Dataset):
         self.data_dir = data_dir
         
     def __len__(self):
-        return 1000
+        return 2000
 
     def __getitem__(self, index):
         # generates one sample of data
