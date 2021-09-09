@@ -53,7 +53,46 @@ class MetaClassifier(nn.Module):
         concat = torch.cat((L1, L2, L3, L4), 1)
         return self.rho(concat), n1_out, n2_out, n3_out, n4_out
         
-   
+    
+    
+class Baseline(nn.Module):
+    def __init__(self):
+        super(Baseline, self).__init__()
+        self.phi1 = nn.Sequential(
+            nn.Linear(105, 1),
+            nn.ELU(inplace=True)
+        )
+        self.phi2 = nn.Sequential(
+            nn.Linear(33, 1),
+            nn.ELU(inplace=True)
+        )
+        self.phi3 = nn.Sequential(
+            nn.Linear(17, 1),
+            nn.ELU(inplace=True)
+        )
+        self.phi4 = nn.Sequential(
+            nn.Linear(9, 1),
+            nn.ELU(inplace=True)
+        )
+        self.rho = nn.Sequential(
+            nn.Linear(57, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x1, x2, x3, x4):
+        n1 = self.phi1(x1)
+        n2 = self.phi2(x2)
+        n3 = self.phi3(x3)
+        n4 = self.phi4(x4)
+        concat = torch.cat((n1, n2, n3, n4),1)
+        concat = concat.permute(0,2,1)
+        n1_out = n1
+        n2_out = n2
+        n3_out = n3
+        n4_out = n4
+
+        return self.rho(concat), n1_out, n2_out, n3_out, n4_out
+    
     
 class MetaWithVar(nn.Module):
     def __init__(self):
@@ -87,8 +126,6 @@ class MetaWithVar(nn.Module):
         v1 = torch.var(n1,1)
         n1_out = n1
 
-        print(s1.shape)
-        print(v1.shape)
         n1 = n1.permute(0,2,1).expand(-1,16,-1)
         x2 = torch.cat((x2,n1),2)
         n2 = self.phi2(x2)
@@ -111,7 +148,7 @@ class MetaWithVar(nn.Module):
         n4 = self.phi4(x4)
         s4 = n4.sum(1)
         i, m4 = n4.median(1)
-        v4 = torch.var(n4, 1)
+        v4 = n4.squeeze(1)
         n4_out = n4
 
         var = torch.cat((s1, s2, s3, s4, v1, v2, v3, v4), 1)
@@ -119,7 +156,57 @@ class MetaWithVar(nn.Module):
         v = torch.cat((v1, v2, v3, v4), 1)
         return self.rho(var), n1_out, n2_out, n3_out, n4_out
         
+class MetaWithAcc(nn.Module):
+    def __init__(self):
+        super(MetaWithAcc, self).__init__()
+        self.phi1 = nn.Sequential(
+            nn.Linear(105, 1),
+            nn.ELU(inplace = True)
+        )
+        self.phi2 = nn.Sequential(
+            nn.Linear(65, 1),
+            nn.ELU(inplace = True)
+        )
+        self.phi3 = nn.Sequential(
+            nn.Linear(33, 1),
+            nn.ELU(inplace = True)
+        )
+        self.phi4 = nn.Sequential(
+            nn.Linear(17, 1),
+            nn.ELU(inplace = True)
+        )
+        self.rho = nn.Sequential(
+            nn.Linear(6, 1),
+            nn.Sigmoid()
+        )
 
+    def forward(self, x1, x2, x3, x4, a1, a2):
+        n1 = self.phi1(x1)
+        L1 = n1.sum(1)
+        n1_out = n1
+
+        n1 = n1.permute(0,2,1).expand(-1,16,-1)
+        x2 = torch.cat((x2,n1),2)
+        n2 = self.phi2(x2)
+        L2 = n2.sum(1)
+        n2_out = n2
+
+        n2 = n2.permute(0,2,1).expand(-1,8,-1)
+        x3 = torch.cat((x3,n2),2)
+        n3 = self.phi3(x3)
+        L3 = n3.sum(1)
+        n3_out = n3
+
+        n3 = n3.permute(0,2,1)
+        x4 = torch.cat((x4,n3),2)
+        n4 = self.phi4(x4)
+        L4 = n4.sum(1)
+        n4_out = n4
+
+        a1 = a1.float()
+        a2 = a2.float()
+        concat = torch.cat((L1, L2, L3, L4, a1, a2), 1)
+        return self.rho(concat), n1_out, n2_out, n3_out, n4_out
 
 
 
